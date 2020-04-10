@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "browserify -t brfs index.js -o bundle.js"
+    "build": "browserify -t brfs index.js -o bundle.js",
+    "start": "npm run build && npm run serve",
+    "serve": "npx serve"
   },
   "repository": {
     "type": "git",
@@ -18,9 +20,12 @@
   },
   "homepage": "https://github.com/flyswatter/js-eth-personal-sign-examples#readme",
   "dependencies": {
+    "@walletconnect/web3-provider": "^1.0.0-beta.47",
     "eth-sig-util": "^2.3.0",
     "ethereumjs-util": "^5.1.1",
-    "ethjs": "^0.3.0"
+    "ethjs": "^0.3.0",
+    "web3": "^1.2.6",
+    "web3modal": "^1.3.0"
   },
   "devDependencies": {
     "babel-runtime": "^6.26.0",

@@ -1,60 +1,98 @@
-var ethUtil = require('ethereumjs-util')
-var sigUtil = require('eth-sig-util')
-var Eth = require('ethjs')
+const ethUtil = require('ethereumjs-util')
+const sigUtil = require('eth-sig-util')
+const Eth = require('ethjs');
+const Web3 = require('web3');
+const Web3Modal = require('web3modal').default;
+const WalletConnectProvider = require("@walletconnect/web3-provider").default;
+
 window.Eth = Eth
-console.log('new V2')
-var fs = require('fs')
-var terms = fs.readFileSync(__dirname + '/terms.txt').toString()
-
-connectButton.addEventListener('click', function () {
-  connect()
-})
-
-function connect () {
-  if (typeof ethereum !== 'undefined') {
-    ethereum.enable()
-    .catch(console.error)
+const fs = require('fs')
+const terms = fs.readFileSync(__dirname + '/terms.txt').toString()
+const getAccount = async () => {
+  if (window.web3 && window.web3.currentProvider && web3.currentProvider.accounts &&  web3.currentProvider.accounts.length) {
+    return web3.currentProvider.accounts[0].toLowerCase();
+  } else {
+    await connect();
+    return getAccount();
   }
 }
 
-ethSignButton.addEventListener('click', function(event) {
+const initWeb3Modal = async () => {
+  const providerOptions = {
+    walletconnect: {
+      package: WalletConnectProvider, // required
+      options: {
+        infuraId: "d27b830b300f401f8a4629908c9b4ad7" // required
+      }
+    }
+  };
+  
+  const web3Modal = new Web3Modal({
+    network: "mainnet", // optional
+    cacheProvider: true, // optional
+    providerOptions // required
+  });
+  
+  const provider = await web3Modal.connect();
+  console.log('PROVIDER:', provider);
+  window.web3 = new Web3(provider);
+  window.web3ModalReady = true;
+  console.log('PROVIDER:', window.web3);
+  connect();
+};
+
+connectButton.addEventListener('click', async () => {
+  initWeb3Modal();
+})
+
+const connect = async () => {
+  if (window.web3ModalReady && window.web3 && window.web3.currentProvider) {
+    const accounts = await window.web3.currentProvider.enable();
+    console.log('connect :: accounts', accounts);
+  } else {
+    initWeb3Modal();
+  }
+}
+
+ethSignButton.addEventListener('click', async (event) => {
   event.preventDefault()
-  var msg = '0x879a053d4800c6354e76c7985a865d2922c82fb5b3f4577b2fe08b998954f2e0'
-  var from = web3.eth.accounts[0]
-  if (!from) return connect()
-  web3.eth.sign(from, msg, function (err, result) {
+  const msg = '0x879a053d4800c6354e76c7985a865d2922c82fb5b3f4577b2fe08b998954f2e0'
+  
+  const from = await getAccount();
+  console.log('ethSignButton', { from });
+  web3.eth.sign(msg, from, (err, result) => {
     if (err) return console.error(err)
-    console.log('SIGNED:' + result)
+    alert('SIGNED:\n' + result);
   })
 })
 
-personalSignButton.addEventListener('click', function(event) {
+personalSignButton.addEventListener('click', async (event) => {
   event.preventDefault()
-  var text = terms
-  var msg = ethUtil.bufferToHex(new Buffer(text, 'utf8'))
-  // var msg = '0x1' // hexEncode(text)
+  const text = terms
+  const msg = ethUtil.bufferToHex(new Buffer(text, 'utf8'))
+  // const msg = '0x1' // hexEncode(text)
   console.log(msg)
-  var from = web3.eth.accounts[0]
-  if (!from) return connect()
+  const from = await getAccount();
+  
 
   /*  web3.personal.sign not yet implemented!!!
    *  We're going to have to assemble the tx manually!
    *  This is what it would probably look like, though:
-    web3.personal.sign(msg, from) function (err, result) {
+    web3.personal.sign(msg, from) (err, result) => {
       if (err) return console.error(err)
       console.log('PERSONAL SIGNED:' + result)
     })
   */
 
    console.log('CLICKED, SENDING PERSONAL SIGN REQ')
-  var params = [msg, from]
-  var method = 'personal_sign'
+  const params = [msg, from]
+  const method = 'personal_sign'
 
   web3.currentProvider.sendAsync({
     method,
     params,
     from,
-  }, function (err, result) {
+  }, (err, result) => {
     if (err) return console.error(err)
     if (result.error) return console.error(result.error)
     console.log('PERSONAL SIGNED:' + JSON.stringify(result.result))
@@ -68,7 +106,7 @@ personalSignButton.addEventListener('click', function(event) {
 
     if (recovered === from ) {
       console.log('SigUtil Successfully verified signer as ' + from)
-      window.alert('SigUtil Successfully verified signer as ' + from)
+      alert('SigUtil Successfully verified signer as ' + from)
     } else {
       console.dir(recovered)
       console.log('SigUtil Failed to verify signer when comparing ' + recovered.result + ' to ' + from)
@@ -78,7 +116,7 @@ personalSignButton.addEventListener('click', function(event) {
 
     /*
     method = 'personal_ecRecover'
-    var params = [msg, result.result]
+    const params = [msg, result.result]
     web3.currentProvider.sendAsync({
       method,
       params,
@@ -101,33 +139,33 @@ personalSignButton.addEventListener('click', function(event) {
 })
 
 
-personalRecoverTest.addEventListener('click', function(event) {
+personalRecoverTest.addEventListener('click', async (event) => {
   event.preventDefault()
-  var text = 'hello!'
-  var msg = ethUtil.bufferToHex(new Buffer(text, 'utf8'))
-  // var msg = '0x1' // hexEncode(text)
+  const text = 'hello!'
+  const msg = ethUtil.bufferToHex(new Buffer(text, 'utf8'))
+  // const msg = '0x1' // hexEncode(text)
   console.log(msg)
-  var from = web3.eth.accounts[0]
-  if (!from) return connect()
+  const from = await getAccount();
+  
 
   /*  web3.personal.sign not yet implemented!!!
    *  We're going to have to assemble the tx manually!
    *  This is what it would probably look like, though:
-    web3.personal.sign(msg, from) function (err, result) {
+    web3.personal.sign(msg, from) (err, result) => {
       if (err) return console.error(err)
       console.log('PERSONAL SIGNED:' + result)
     })
   */
 
    console.log('CLICKED, SENDING PERSONAL SIGN REQ')
-  var params = [msg, from]
-  var method = 'personal_sign'
+  const params = [msg, from]
+  let method = 'personal_sign';
 
   web3.currentProvider.sendAsync({
     method,
     params,
     from,
-  }, function (err, result) {
+  }, (err, result) => {
     if (err) return console.error(err)
     if (result.error) return console.error(result.error)
     console.log('PERSONAL SIGNED:' + JSON.stringify(result.result))
@@ -137,13 +175,13 @@ personalRecoverTest.addEventListener('click', function(event) {
     msgParams.sig = result.result
 
     method = 'personal_ecRecover'
-    var params = [msg, result.result]
+    const params = [msg, result.result]
     web3.currentProvider.sendAsync({
       method,
       params,
       from,
-    }, function (err, result) {
-      var recovered = result.result
+    }, (err, result) => {
+      const recovered = result.result
       console.log('ec recover called back:')
       console.dir({ err, recovered })
       if (err) return console.error(err)
@@ -151,7 +189,7 @@ personalRecoverTest.addEventListener('click', function(event) {
 
 
       if (recovered === from ) {
-        console.log('Successfully ecRecovered signer as ' + from)
+        alert('Successfully ecRecovered signer as ' + from)
       } else {
         console.log('Failed to verify signer when comparing ' + result + ' to ' + from)
       }
@@ -161,18 +199,18 @@ personalRecoverTest.addEventListener('click', function(event) {
 
 })
 
-ethjsPersonalSignButton.addEventListener('click', function(event) {
+ethjsPersonalSignButton.addEventListener('click', async (event) => {
   event.preventDefault()
-  var text = terms
-  var msg = ethUtil.bufferToHex(new Buffer(text, 'utf8'))
-  var from = web3.eth.accounts[0]
-  if (!from) return connect()
+  const text = terms
+  const msg = ethUtil.bufferToHex(new Buffer(text, 'utf8'))
+  const from = await getAccount();
+  
 
   console.log('CLICKED, SENDING PERSONAL SIGN REQ')
-  var params = [from, msg]
+  const params = [from, msg]
 
   // Now with Eth.js
-  var eth = new Eth(web3.currentProvider)
+  const eth = new Eth(web3.currentProvider)
 
   eth.personal_sign(msg, from)
   .then((signed) => {
@@ -184,7 +222,7 @@ ethjsPersonalSignButton.addEventListener('click', function(event) {
   .then((recovered) => {
 
     if (recovered === from) {
-      console.log('Ethjs recovered the message signer!')
+      alert('Ethjs recovered the message signer!')
     } else {
       console.log('Ethjs failed to recover the message signer!')
       console.dir({ recovered })
@@ -193,7 +231,7 @@ ethjsPersonalSignButton.addEventListener('click', function(event) {
 })
 
 
-signTypedDataButton.addEventListener('click', function(event) {
+signTypedDataButton.addEventListener('click', async (event) => {
   event.preventDefault()
 
   const msgParams = [
@@ -209,34 +247,34 @@ signTypedDataButton.addEventListener('click', function(event) {
     }
   ]
 
-  var from = web3.eth.accounts[0]
-  if (!from) return connect()
+  const from = await getAccount();
+  
 
   /*  web3.eth.signTypedData not yet implemented!!!
    *  We're going to have to assemble the tx manually!
    *  This is what it would probably look like, though:
-    web3.eth.signTypedData(msg, from) function (err, result) {
+    web3.eth.signTypedData(msg, from) (err, result) => {
       if (err) return console.error(err)
       console.log('PERSONAL SIGNED:' + result)
     })
   */
 
-   console.log('CLICKED, SENDING PERSONAL SIGN REQ')
-  var params = [msgParams, from]
+   console.log('CLICKED, SENDING eth_signTypedData SIGN REQ')
+  const params = [msgParams, from]
   console.dir(params)
-  var method = 'eth_signTypedData'
+  const method = 'eth_signTypedData'
 
   web3.currentProvider.sendAsync({
     method,
     params,
     from,
-  }, function (err, result) {
+  }, (err, result) => {
     if (err) return console.dir(err)
     if (result.error) {
       alert(result.error.message)
     }
-    if (result.error) return console.error(result)
-    console.log('PERSONAL SIGNED:' + JSON.stringify(result.result))
+    if (result.error) return console.error('ERROR', result)
+    console.log('eth_signTypedData signed:' + JSON.stringify(result.result))
 
     const recovered = sigUtil.recoverTypedSignatureLegacy({ data: msgParams, sig: result.result })
 
@@ -250,15 +288,10 @@ signTypedDataButton.addEventListener('click', function(event) {
 
 })
 
-signTypedDataV3Button.addEventListener('click', function(event) {
+signTypedDataV3Button.addEventListener('click', async (event) => {
   event.preventDefault()
   
-  web3.currentProvider.sendAsync({
-    method: 'net_version',
-    params: [],
-    jsonrpc: "2.0"
-  }, function (err, result) {
-    const netId = result.result
+ 
     const msgParams = JSON.stringify({types:{
       EIP712Domain:[
         {name:"name",type:"string"},
@@ -277,7 +310,7 @@ signTypedDataV3Button.addEventListener('click', function(event) {
       ]
     },
     primaryType:"Mail",
-    domain:{name:"Ether Mail",version:"1",chainId:netId,verifyingContract:"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC"},
+    domain:{name:"Ether Mail",version:"1",chainId:1,verifyingContract:"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC"},
     message:{
       from:{name:"Cow",wallet:"0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"},
       to:{name:"Bob",wallet:"0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"},
@@ -286,18 +319,17 @@ signTypedDataV3Button.addEventListener('click', function(event) {
   
       
   
-    var from = web3.eth.accounts[0]
-  
-    console.log('CLICKED, SENDING PERSONAL SIGN REQ', 'from', from, msgParams)
-    var params = [from, msgParams]
+    const from = await getAccount();
+    console.log('CLICKED, SENDING eth_signTypedData_v3 REQ', 'from', from, msgParams)
+    const params = [msgParams, from]
     console.dir(params)
-    var method = 'eth_signTypedData_v3'
+    const method = 'eth_signTypedData_v3'
   
     web3.currentProvider.sendAsync({
       method,
       params,
       from,
-    }, function (err, result) {
+    }, (err, result) => {
       if (err) return console.dir(err)
       if (result.error) {
         alert(result.error.message)
@@ -314,12 +346,9 @@ signTypedDataV3Button.addEventListener('click', function(event) {
       }
   
     })
-  
-  })
-
 })
 
-signTypedDataV4Button.addEventListener('click', function(event) {
+signTypedDataV4Button.addEventListener('click', async (event) => {
   event.preventDefault()
 
   const msgParams = JSON.stringify({
@@ -367,16 +396,19 @@ signTypedDataV4Button.addEventListener('click', function(event) {
     }
   });
 
-  var from = web3.eth.accounts[0]
+  const from = await getAccount();
 
-  var params = [from, msgParams]
-  var method = 'eth_signTypedData_v4'
+  const params = [msgParams, from]
+  const method = 'eth_signTypedData_v4'
+
+  console.log('CLICKED, SENDING eth_signTypedData_v4 REQ', 'from', from, msgParams)
+
 
   web3.currentProvider.sendAsync({
     method,
     params,
     from,
-  }, function (err, result) {
+  }, (err, result) => {
     if (err) return console.dir(err)
     if (result.error) {
       alert(result.error.message)
@@ -396,7 +428,7 @@ signTypedDataV4Button.addEventListener('click', function(event) {
 
 })
 
-ethjsSignTypedDataButton.addEventListener('click', function(event) {
+ethjsSignTypedDataButton.addEventListener('click', async (event) => {
   event.preventDefault()
 
   const msgParams = [
@@ -412,13 +444,13 @@ ethjsSignTypedDataButton.addEventListener('click', function(event) {
     }
   ]
 
-  var from = web3.eth.accounts[0]
-  if (!from) return connect()
+  const from = await getAccount();
+  
 
   console.log('CLICKED, SENDING PERSONAL SIGN REQ')
-  var params = [msgParams, from]
+  const params = [msgParams, from]
 
-  var eth = new Eth(web3.currentProvider)
+  const eth = new Eth(web3.currentProvider)
 
   eth.signTypedData(msgParams, from)
   .then((signed) => {
