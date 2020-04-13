@@ -323,7 +323,7 @@ signTypedDataV3Button.addEventListener('click', async (event) => {
     console.log('CLICKED, SENDING eth_signTypedData_v3 REQ', 'from', from, msgParams)
     const params = [msgParams, from]
     console.dir(params)
-    const method = 'eth_signTypedData_v3'
+    const method = 'eth_signTypedData'
   
     web3.currentProvider.sendAsync({
       method,
@@ -399,7 +399,7 @@ signTypedDataV4Button.addEventListener('click', async (event) => {
   const from = await getAccount();
 
   const params = [msgParams, from]
-  const method = 'eth_signTypedData_v4'
+  const method = 'eth_signTypedData'
 
   console.log('CLICKED, SENDING eth_signTypedData_v4 REQ', 'from', from, msgParams)
 
@@ -425,45 +425,5 @@ signTypedDataV4Button.addEventListener('click', async (event) => {
     }
 
   })
+});
 
-})
-
-ethjsSignTypedDataButton.addEventListener('click', async (event) => {
-  event.preventDefault()
-
-  const msgParams = [
-    {
-      type: 'string',
-      name: 'Message',
-      value: 'Hi, Alice!'
-    },
-    {
-      type: 'uint32',
-      name: 'A number',
-      value: '1337'
-    }
-  ]
-
-  const from = await getAccount();
-  
-
-  console.log('CLICKED, SENDING PERSONAL SIGN REQ')
-  const params = [msgParams, from]
-
-  const eth = new Eth(web3.currentProvider)
-
-  eth.signTypedData(msgParams, from)
-  .then((signed) => {
-    console.log('Signed!  Result is: ', signed)
-    console.log('Recovering...')
-
-    const recovered = sigUtil.recoverTypedSignature({ data: msgParams, sig: signed })
-
-    if (ethUtil.toChecksumAddress(recovered) === ethUtil.toChecksumAddress(from)) {
-      alert('Successfully ecRecovered signer as ' + from)
-    } else {
-      alert('Failed to verify signer when comparing ' + signed + ' to ' + from)
-    }
-
-  })
-})
